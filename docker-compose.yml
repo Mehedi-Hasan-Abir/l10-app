@@ -1,0 +1,56 @@
+# `docker compose up --build` → app at http://localhost:3000 (API docs: /api/docs), seed loaded.
+# APP_NOW runs the app at another business date; APP_PORT changes the host port.
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: l10
+      POSTGRES_PASSWORD: l10
+      POSTGRES_DB: l10
+    ports:
+      - "15432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infra/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U l10 -d l10"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://l10:l10@db:5432/l10
+      TEST_DATABASE_URL: postgresql+asyncpg://l10:l10@db:5432/l10_test
+      APP_NOW: ${APP_NOW:-2026-11-11T15:00:00Z}
+      APP_CLOCK: ${APP_CLOCK:-running}
+      SECRET_KEY: ${SECRET_KEY:-dev-insecure-secret}
+      ALLOWED_ORIGINS: http://localhost:${APP_PORT:-3000},http://127.0.0.1:${APP_PORT:-3000}
+      COOKIE_SECURE: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    depends_on:
+      api:
+        condition: service_healthy
+
+  proxy:
+    image: caddy:2.10-alpine
+    ports:
+      - "${APP_PORT:-3000}:80"
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+volumes:
+  db-data:

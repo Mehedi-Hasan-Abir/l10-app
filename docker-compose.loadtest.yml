@@ -1,0 +1,33 @@
+# Overlay for the load test (HARDENING H5). Always used with its own project name so it can never touch the
+# default stack (port 3000, volume l10-app_db-data):
+#   docker compose -p l10load -f docker-compose.yml -f docker-compose.loadtest.yml ...
+# `bash loadtest/run.sh` does all of this. No host ports (the k6 container reaches everything at
+# http://proxy / ws://proxy on the compose network); the API is capped at ONE vCPU and 1 GiB, which is the
+# unit the capacity numbers in docs/LOAD_TEST.md are expressed in.
+services:
+  db:
+    ports: !reset []
+  proxy:
+    ports: !reset []
+  api:
+    cpus: "1.0"
+    mem_limit: 1g
+    environment:
+      # Every virtual user signs in from one address: the per-IP login limiter would 429 them.
+      LOGIN_RATE_LIMIT_PER_MINUTE: "0"
+      ALLOWED_ORIGINS: http://proxy
+  k6:
+    image: grafana/k6:2.4.0
+    profiles: ["loadtest"]
+    working_dir: /loadtest
+    environment:
+      BASE_URL: http://proxy
+      WS_URL: ws://proxy
+      ORIGIN: http://proxy
+      K6_NO_USAGE_REPORT: "true"
+    volumes:
+      - ./loadtest:/loadtest:ro
+      - ./loadtest/results:/loadtest/results
+    depends_on:
+      proxy:
+        condition: service_started

@@ -1,0 +1,18 @@
+
+capacity step: 35 bundles/s for 45s (+10s warmup), write mix 0.1 -> FAIL
+  achieved 23.8 bundles/s, 214 req/s (51 writes), errors 0.00 %, dropped iterations 0
+  browse GET  p50 1291  p95 3170  p99 4910 ms; page load (8 GETs) p95 5372 ms; write p95 3252 ms
+  me         p50  1290 ms   p95  3305 ms
+  team       p50  1386 ms   p95  3202 ms
+  scorecard  p50  1404 ms   p95  3168 ms
+  issues     p50  1323 ms   p95  3142 ms
+  todos      p50  1365 ms   p95  3133 ms
+  rocks      p50  1453 ms   p95  3421 ms
+  meetings   p50   159 ms   p95  2704 ms
+  audit      p50   770 ms   p95  2980 ms
+  failed thresholds:
+    http_req_duration{phase:measure,kind:browse} p(95)<300
+    http_req_duration{phase:measure,kind:browse} p(95)<3000
+    http_req_duration{phase:measure,kind:write} p(95)<300
+time="2026-11-26T19:55:20Z" level=error msg="thresholds on metrics 'http_req_duration{phase:measure,kind:browse}, http_req_duration{phase:measure,kind:write}' were crossed; at least one has abortOnFail enabled, stopping test prematurely"
+

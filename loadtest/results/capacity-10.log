@@ -1,0 +1,12 @@
+
+capacity step: 10 bundles/s for 45s (+10s warmup), write mix 0.1 -> PASS
+  achieved 10.0 bundles/s, 81 req/s (30 writes), errors 0.00 %, dropped iterations 0
+  browse GET  p50 22  p95 38  p99 56 ms; page load (8 GETs) p95 53 ms; write p95 14 ms
+  me         p50    10 ms   p95    27 ms
+  team       p50    27 ms   p95    42 ms
+  scorecard  p50    27 ms   p95    46 ms
+  issues     p50    16 ms   p95    37 ms
+  todos      p50    25 ms   p95    40 ms
+  rocks      p50    25 ms   p95    38 ms
+  meetings   p50    22 ms   p95    32 ms
+  audit      p50    12 ms   p95    25 ms

@@ -1,0 +1,125 @@
+# CI for the L10 app: frontend checks, the full docker test suite, and supply-chain scanning.
+# Least privilege: the workflow only reads repository contents. Nothing here needs write access.
+name: CI
+
+on:
+  # PRs run on pull_request; pushes only for main, so a PR branch isn't built twice.
+  push:
+    branches: [main]
+  pull_request:
+
+# One run per ref. A newer push (or PR update) cancels the superseded run.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Lint, typecheck, formatting and a production build of the Next.js app.
+  frontend:
+    name: Frontend (lint, types, format, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Check formatting
+        run: npm run format:check
+      - name: Build
+        run: npm run build
+
+  # The ONE test command: backend lint + pytest + two-browser Playwright E2E, in an isolated compose project.
+  test:
+    name: Test (scripts/test.sh)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Run the full suite
+        run: bash scripts/test.sh
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-test-results
+          path: e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Upload Playwright HTML report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-playwright-report
+          path: e2e/playwright-report
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Supply-chain scanning. Dependency audits block the build; the image scan is report-only.
+  audit:
+    name: Audit (dependencies, images)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Backend: audit exactly what ships (locked runtime dependencies, no dev group).
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Export locked runtime requirements
+        working-directory: backend
+        run: uv export --frozen --no-dev --no-emit-project --format requirements-txt --output-file "$RUNNER_TEMP/requirements.txt"
+      - name: pip-audit (blocking)
+        run: uvx pip-audit --requirement "$RUNNER_TEMP/requirements.txt" --disable-pip --strict
+
+      # Frontend: production dependencies only; fail on high or critical advisories.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm audit (blocking)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
+      # Images: scan what we build. Report-only (exit-code 0) because base-image CVEs are outside our control.
+      - name: Build api and web images
+        run: docker compose -p l10audit build api web
+      - name: Trivy scan, api image (report-only)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0 (SHA-pinned: this action had a tag-compromise incident)
+        with:
+          image-ref: l10audit-api:latest
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"
+      - name: Trivy scan, web image (report-only)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0 (SHA-pinned: this action had a tag-compromise incident)
+        with:
+          image-ref: l10audit-web:latest
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"

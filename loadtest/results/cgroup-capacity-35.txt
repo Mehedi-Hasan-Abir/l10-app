@@ -1,0 +1,2 @@
+usage_usec=286497920 user_usec=239748960 system_usec=46748960 nice_usec=0 nr_periods=4223 nr_throttled=929 throttled_usec=24359048 nr_bursts=0 burst_usec=0 
+usage_usec=318989122 user_usec=267519085 system_usec=51470036 nice_usec=0 nr_periods=4552 nr_throttled=1091 throttled_usec=27412378 nr_bursts=0 burst_usec=0 

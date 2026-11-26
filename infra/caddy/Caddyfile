@@ -1,0 +1,49 @@
+# One origin for the browser: no CORS, same-origin cookies, WebSockets proxied natively.
+
+# Content-Security-Policy for the app (Next.js pages and the JSON API).
+# 'unsafe-inline' in script-src is a documented trade-off: Next.js hydrates from inline <script> tags
+# (`self.__next_f.push(...)`) and, without per-request nonces (which would need middleware and dynamic
+# rendering for every page), they cannot be allow-listed any other way. Everything else stays locked to
+# 'self'; ws:/wss: is for the realtime WebSocket (same origin, proxied below).
+(app_csp) {
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+}
+
+:80 {
+	# Security headers on every response. `defer` applies them after the upstream answered, so they replace
+	# (not duplicate) anything Next.js or uvicorn set, and `-Server` can strip the upstream's `Server` header.
+	# No Strict-Transport-Security here: this stack serves plain HTTP on :80 (TLS terminates elsewhere, or
+	# not at all in local use), and HSTS over HTTP is ignored by browsers. When Caddy terminates TLS (a real
+	# hostname instead of `:80`), add to this block:
+	#   Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+		-X-Powered-By
+		defer
+	}
+
+	# Swagger UI / ReDoc load their JS and CSS from cdn.jsdelivr.net, the favicon from fastapi.tiangolo.com,
+	# and bootstrap themselves with an inline <script>, so the docs pages get a looser CSP than the app.
+	# (ReDoc is disabled in the app today; the matcher keeps its CSP right if it is switched on.)
+	@docs path /api/docs* /api/redoc*
+	handle @docs {
+		header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://fastapi.tiangolo.com; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		reverse_proxy api:8000
+	}
+	handle /api/* {
+		import app_csp
+		reverse_proxy api:8000
+	}
+	handle /ws/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		import app_csp
+		reverse_proxy web:3000
+	}
+}

@@ -1,0 +1,6 @@
+date:        2026-11-26T19:46:52Z
+docker:      29.6.1
+docker host:  Docker Desktop (containerized), kernel 6.18.58.1-microsoft-standard-WSL2, 6 CPUs, 10431340544 bytes RAM
+api limits:  nano_cpus=1000000000 memory=1073741824
+k6 image:    grafana/k6:2.4.0
+settings:    STEPS='5 10 15 20 25 27 30 35 40 50 60' SOCKET_STEPS='100 500 1000 2000 4000' HOLD=45 WARMUP=10 WRITE_MIX=0.10 TEAMS_ONLY=''

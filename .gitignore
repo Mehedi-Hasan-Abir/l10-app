@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+# Env
+.env
+.env.local
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+# Claude local settings
+.claude/settings.local.json
+docs/_private/

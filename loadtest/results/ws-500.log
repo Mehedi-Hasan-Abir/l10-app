@@ -1,0 +1,6 @@
+
+websocket step: 500 sockets (10 VUs), 15 writes x 3 teams, one every 3000 ms
+  connected 500/500, closed unexpectedly 0, invalidates delivered 7500/7500 (100.00 %)
+  connect: open p50 4 p95 6 ms; snapshot ready p50 5 p95 8 max 53 ms
+  delivery (PUT fired -> invalidate received): p50 31 p90 45 p95 99 p99 119 max 122 ms
+  writer: PUT response p50 46 p95 110 ms, fired late by p95 1 ms, failed 0

@@ -1,0 +1,22 @@
+# Overlay used by scripts/test.sh with `-p l10test`: an isolated, throwaway stack with no host ports,
+# plus the Playwright runner, which reaches the app at http://proxy inside the compose network.
+services:
+  db:
+    ports: !reset []
+  proxy:
+    ports: !reset []
+  api:
+    environment:
+      ALLOWED_ORIGINS: http://proxy
+  e2e:
+    build: ./e2e
+    profiles: ["e2e"]
+    environment:
+      E2E_BASE_URL: http://proxy
+      E2E_DEMO_FAILURE: ${E2E_DEMO_FAILURE:-0}
+    volumes:
+      - ./e2e/test-results:/e2e/test-results
+      - ./e2e/playwright-report:/e2e/playwright-report
+    depends_on:
+      proxy:
+        condition: service_started

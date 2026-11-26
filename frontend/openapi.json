@@ -1,0 +1,4166 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "L10 API",
+    "description": "Level 10 meeting app: Scorecard, Rocks, To-Dos, Issues and a live weekly meeting.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness probe",
+        "description": "The process is up and serving. Does not touch the database (see `/api/ready`).",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ready": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Readiness probe",
+        "description": "Ready to serve traffic: a `SELECT 1` through the app's session factory succeeds within 2 s.",
+        "operationId": "ready_api_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyStatus"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The database is unreachable or too slow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/users": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "List Users",
+        "operationId": "auth_list_users",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserWithTeams"
+                  },
+                  "type": "array",
+                  "title": "Response Auth List Users"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "auth_login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many sign-in attempts from this address (`rate_limited`); see `Retry-After`",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until another sign-in attempt is accepted",
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1.0
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "auth_logout",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "auth_me",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams": {
+      "get": {
+        "tags": [
+          "teams"
+        ],
+        "summary": "List my teams",
+        "description": "Teams the caller can open: their memberships, or every team for an Admin.",
+        "operationId": "teams_list_teams",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamRef"
+                  },
+                  "type": "array",
+                  "title": "Response Teams List Teams"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}": {
+      "get": {
+        "tags": [
+          "teams"
+        ],
+        "summary": "Team detail",
+        "description": "Members, eligible To-Do owners, the caller's permissions, the business clock (`APP_NOW`) and the active meeting, if any.",
+        "operationId": "teams_get_team",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a member of this team, or the team does not exist (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Admins only: unknown team (`team_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/scorecard": {
+      "get": {
+        "tags": [
+          "scorecard"
+        ],
+        "summary": "Scorecard (13 weeks)",
+        "description": "Measurables by week for the 13 weeks ending with the current week, oldest first. `cells` align with `weeks`. Status is computed server-side: a closed week without a score is `off_track`, the current week without a score is `pending`.",
+        "operationId": "scorecard_get_scorecard",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Scorecard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/measurables/{measurable_id}/scores/{week_start}": {
+      "put": {
+        "tags": [
+          "scorecard"
+        ],
+        "summary": "Set or clear a score",
+        "description": "Last save wins. Send `value: null` to clear the cell. Send `expected_version` (from the cell) for lost-update protection: a stale version returns 409 `version_conflict` with the current cell in `detail.current`.",
+        "operationId": "scorecard_put_score",
+        "parameters": [
+          {
+            "name": "measurable_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Measurable id, e.g. `m1`",
+              "title": "Measurable Id"
+            },
+            "description": "Measurable id, e.g. `m1`"
+          },
+          {
+            "name": "week_start",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Monday of the week (company time), `YYYY-MM-DD`",
+              "title": "Week Start"
+            },
+            "description": "Monday of the week (company time), `YYYY-MM-DD`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreCell"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown measurable in this team (`measurable_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale `expected_version` (`version_conflict`, current cell in `detail.current`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`week_not_monday`, `week_out_of_window`, or an invalid value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/measurables/{measurable_id}/scores/{week_start}/issue": {
+      "post": {
+        "tags": [
+          "scorecard"
+        ],
+        "summary": "Make it an Issue (off-track score)",
+        "description": "Creates an Issue titled `{measurable}, week of {Mon D}`, owned by the caller, or returns the existing unsolved one for that cell. Duplicate-free under concurrency (partial unique index + `ON CONFLICT DO NOTHING`). 201 when created, 200 when it already existed.",
+        "operationId": "scorecard_make_issue_from_score",
+        "parameters": [
+          {
+            "name": "measurable_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Measurable id, e.g. `m1`",
+              "title": "Measurable Id"
+            },
+            "description": "Measurable id, e.g. `m1`"
+          },
+          {
+            "name": "week_start",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Monday of the week (company time), `YYYY-MM-DD`",
+              "title": "Week Start"
+            },
+            "description": "Monday of the week (company time), `YYYY-MM-DD`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MakeIssueResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "An unsolved Issue for this cell already existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MakeIssueResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown measurable in this team (`measurable_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The cell is not off track (`not_off_track`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a Monday or outside the 13-week window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/issues": {
+      "get": {
+        "tags": [
+          "issues"
+        ],
+        "summary": "List Issues",
+        "description": "`unsolved` (default) in Issue order: priority 5 down to 1, oldest first within a priority, no priority last. `solved` newest-solved first.",
+        "operationId": "issues_list_issues",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "unsolved",
+                "solved"
+              ],
+              "type": "string",
+              "description": "Which issues to list",
+              "default": "unsolved",
+              "title": "Status"
+            },
+            "description": "Which issues to list"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Issue"
+                  },
+                  "title": "Response Issues List Issues"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "issues"
+        ],
+        "summary": "Create an Issue",
+        "description": "Owner is the caller; priority is optional.",
+        "operationId": "issues_create_issue",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issue"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/issues/{issue_id}": {
+      "patch": {
+        "tags": [
+          "issues"
+        ],
+        "summary": "Set an Issue's priority",
+        "description": "`priority` 1..5 or null. Send `expected_version` for lost-update protection.",
+        "operationId": "issues_set_priority",
+        "parameters": [
+          {
+            "name": "issue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Issue id, e.g. `i1`",
+              "title": "Issue Id"
+            },
+            "description": "Issue id, e.g. `i1`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issue"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown issue in this team (`issue_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already solved (`issue_solved`) or stale `expected_version` (`version_conflict`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/issues/{issue_id}/solve": {
+      "post": {
+        "tags": [
+          "issues"
+        ],
+        "summary": "Solve an Issue",
+        "description": "A resolution note is required (1-2000 characters).",
+        "operationId": "issues_solve_issue",
+        "parameters": [
+          {
+            "name": "issue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Issue id, e.g. `i1`",
+              "title": "Issue Id"
+            },
+            "description": "Issue id, e.g. `i1`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueSolve"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Issue"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown issue in this team (`issue_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already solved (`issue_solved`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/issues/{issue_id}/todos": {
+      "post": {
+        "tags": [
+          "issues"
+        ],
+        "summary": "Add a To-Do from an Issue",
+        "description": "Creates a To-Do linked to the Issue, due in 7 days (company calendar). The owner must be an Admin or Team Member of the team (or any Admin).",
+        "operationId": "issues_add_todo",
+        "parameters": [
+          {
+            "name": "issue_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Issue id, e.g. `i1`",
+              "title": "Issue Id"
+            },
+            "description": "Issue id, e.g. `i1`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueTodoCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown issue in this team (`issue_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Owner not eligible (`owner_not_eligible`) or invalid body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/todos": {
+      "get": {
+        "tags": [
+          "todos"
+        ],
+        "summary": "List To-Dos",
+        "description": "Open To-Dos first (due date ascending), then done ones (done time descending). `completion` is the last closed week's rate (null when nothing was due): done by the week's end / due that week, target 90%.",
+        "operationId": "todos_list_todos",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodoList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/todos/{todo_id}": {
+      "patch": {
+        "tags": [
+          "todos"
+        ],
+        "summary": "Mark a To-Do done or undo it",
+        "description": "`done: true` sets `done_at` to now (kept if already done); `false` clears it. Idempotent.",
+        "operationId": "todos_set_todo_done",
+        "parameters": [
+          {
+            "name": "todo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "To-Do id, e.g. `t12`",
+              "title": "Todo Id"
+            },
+            "description": "To-Do id, e.g. `t12`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TodoUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown To-Do in this team (`todo_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/todos/{todo_id}/issue": {
+      "post": {
+        "tags": [
+          "todos"
+        ],
+        "summary": "Make it an Issue (overdue To-Do)",
+        "description": "Bonus. Creates an Issue titled `{to-do} (To-Do overdue)` or returns the existing unsolved one for this To-Do. 201 when created, 200 when it already existed.",
+        "operationId": "todos_make_issue_from_todo",
+        "parameters": [
+          {
+            "name": "todo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "To-Do id, e.g. `t12`",
+              "title": "Todo Id"
+            },
+            "description": "To-Do id, e.g. `t12`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MakeIssueResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "An unsolved Issue for this To-Do already existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MakeIssueResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown To-Do in this team (`todo_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The To-Do is not overdue (`not_overdue`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/rocks": {
+      "get": {
+        "tags": [
+          "rocks"
+        ],
+        "summary": "List Rocks (current quarter)",
+        "description": "Rocks of the current calendar quarter with computed status and progress, and their Milestones. Status: complete if seeded complete; off track if seeded off track or an unfinished Milestone is past due (a Milestone due today is not past due).",
+        "operationId": "rocks_list_rocks",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RockList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/rocks/{rock_id}/issue": {
+      "post": {
+        "tags": [
+          "rocks"
+        ],
+        "summary": "Make it an Issue (off-track Rock)",
+        "description": "Bonus. Creates an Issue titled `{rock} (Rock off track)` or returns the existing unsolved one for this Rock. 201 when created, 200 when it already existed.",
+        "operationId": "rocks_make_issue_from_rock",
+        "parameters": [
+          {
+            "name": "rock_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Rock id, e.g. `r2`",
+              "title": "Rock Id"
+            },
+            "description": "Rock id, e.g. `r2`"
+          },
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MakeIssueResult"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "An unsolved Issue for this Rock already existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MakeIssueResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown Rock in this team's current quarter (`rock_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The Rock is not off track (`not_off_track`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/meetings": {
+      "get": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "List a team's meetings",
+        "description": "The active meeting first, then ended meetings newest first. Filter with `status`.",
+        "operationId": "meetings_list_meetings",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "ended"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only active or only ended",
+              "title": "Status"
+            },
+            "description": "Only active or only ended"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MeetingState"
+                  },
+                  "title": "Response Meetings List Meetings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the meeting's team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "Start a meeting",
+        "description": "The caller becomes the facilitator and is auto-joined. Starts in the Scorecard section reviewing the last closed week. One active meeting per team, enforced by a partial unique index.",
+        "operationId": "meetings_start_meeting",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The team already has an active meeting (`meeting_already_active`, `detail.meeting_id`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meetings/{meeting_id}": {
+      "get": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "Get a meeting",
+        "description": "Full meeting state. `server_now` is the clock time at serialization: the client derives its offset and renders `elapsed = (now + offset) - section_started_at`.",
+        "operationId": "meetings_get_meeting",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Meeting id, e.g. `mt2`",
+              "title": "Meeting Id"
+            },
+            "description": "Meeting id, e.g. `mt2`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the meeting's team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown meeting (`meeting_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meetings/{meeting_id}/join": {
+      "post": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "Join a meeting",
+        "description": "Idempotent. Anyone who can read the team may join, Observers included.",
+        "operationId": "meetings_join_meeting",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Meeting id, e.g. `mt2`",
+              "title": "Meeting Id"
+            },
+            "description": "Meeting id, e.g. `mt2`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the meeting's team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown meeting (`meeting_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The meeting has ended (`meeting_ended`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meetings/{meeting_id}/advance": {
+      "post": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "Advance to the next section",
+        "description": "Facilitator only. scorecard -> ids -> conclude. A section that overruns never advances by itself.",
+        "operationId": "meetings_advance_meeting",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Meeting id, e.g. `mt2`",
+              "title": "Meeting Id"
+            },
+            "description": "Meeting id, e.g. `mt2`"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/MeetingAdvance"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only the facilitator may do this (`not_facilitator`), or no access to the team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown meeting (`meeting_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already in Conclude (`no_next_section`), ended (`meeting_ended`), or the meeting already left `from_section` (`stale_section`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meetings/{meeting_id}/end": {
+      "post": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "End the meeting",
+        "description": "Facilitator only, from any section. Writes `ended_at` and the frozen summary snapshot in one transaction.",
+        "operationId": "meetings_end_meeting",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Meeting id, e.g. `mt2`",
+              "title": "Meeting Id"
+            },
+            "description": "Meeting id, e.g. `mt2`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only the facilitator may do this (`not_facilitator`), or no access to the team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown meeting (`meeting_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already ended (`meeting_ended`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meetings/{meeting_id}/rating": {
+      "put": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "Rate the meeting",
+        "description": "Upsert the caller's 1-10 rating; changeable until the meeting ends. Only in the Conclude section, and only for attendees who are Admins or Team Members.",
+        "operationId": "meetings_rate_meeting",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Meeting id, e.g. `mt2`",
+              "title": "Meeting Id"
+            },
+            "description": "Meeting id, e.g. `mt2`"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`) or an Observer (`read_only_role`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown meeting (`meeting_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`not_in_conclude`, `not_attendee` (join first) or `meeting_ended`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meetings/{meeting_id}/recap": {
+      "get": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "Meeting recap (live)",
+        "description": "Issues solved and To-Dos created during the meeting window `[started_at, ended_at or now]`, as full objects. Used by the Conclude section.",
+        "operationId": "meetings_get_recap",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Meeting id, e.g. `mt2`",
+              "title": "Meeting Id"
+            },
+            "description": "Meeting id, e.g. `mt2`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingRecap"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the meeting's team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown meeting (`meeting_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/meetings/{meeting_id}/summary": {
+      "get": {
+        "tags": [
+          "meetings"
+        ],
+        "summary": "Meeting summary (frozen)",
+        "description": "The snapshot written when the meeting ended: Measurable statuses for the reviewed week, Issues solved, To-Dos created, attendees and rating. Never recomputed, so later edits do not change it.",
+        "operationId": "meetings_get_summary",
+        "parameters": [
+          {
+            "name": "meeting_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Meeting id, e.g. `mt2`",
+              "title": "Meeting Id"
+            },
+            "description": "Meeting id, e.g. `mt2`"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeetingSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to the meeting's team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown meeting (`meeting_not_found`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The meeting is still active (`meeting_active`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/{team_id}/audit": {
+      "get": {
+        "tags": [
+          "audit"
+        ],
+        "summary": "Audit trail",
+        "description": "Who changed what and when: score edits, issues (created, prioritized, solved), To-Dos (created, done, reopened) and meeting steps (started, advanced, rated, ended). Newest first, keyset paginated: pass `next_before_id` of one page as `before_id` to get the next older page. Changes that did not alter anything (an idempotent done toggle, Make it an Issue returning an existing Issue) and refused requests are not recorded. Events are never updated or deleted.",
+        "operationId": "audit_list_audit_events",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Team Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "description": "Page size",
+              "default": 50,
+              "title": "Limit"
+            },
+            "description": "Page size"
+          },
+          {
+            "name": "before_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only events with an id below this one (the previous page's cursor)",
+              "title": "Before Id"
+            },
+            "description": "Only events with an id below this one (the previous page's cursor)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in (`not_authenticated`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No access to this team (`team_forbidden`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`limit` outside 1..200 or `before_id` below 1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActiveMeetingRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "facilitator": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "current_section": {
+            "type": "string",
+            "enum": [
+              "scorecard",
+              "ids",
+              "conclude"
+            ],
+            "title": "Current Section"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "facilitator",
+          "current_section"
+        ],
+        "title": "ActiveMeetingRef"
+      },
+      "AgendaItem": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "scorecard",
+              "ids",
+              "conclude"
+            ],
+            "title": "Key"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "title": "Duration Seconds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "title",
+          "duration_seconds"
+        ],
+        "title": "AgendaItem"
+      },
+      "Attendee": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "team_member",
+              "observer"
+            ],
+            "title": "Role"
+          },
+          "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Joined At"
+          },
+          "online": {
+            "type": "boolean",
+            "title": "Online",
+            "description": "Has an open WebSocket to this team right now"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "joined_at",
+          "online"
+        ],
+        "title": "Attendee"
+      },
+      "AuditEvent": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id",
+            "description": "Strictly increasing; newest events have the highest id"
+          },
+          "team_id": {
+            "type": "string",
+            "title": "Team Id"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/UserRef",
+            "description": "Who made the change"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "score.set",
+              "score.cleared",
+              "issue.created",
+              "issue.priority_changed",
+              "issue.solved",
+              "todo.created",
+              "todo.done",
+              "todo.reopened",
+              "meeting.started",
+              "meeting.advanced",
+              "meeting.rated",
+              "meeting.ended"
+            ],
+            "title": "Action"
+          },
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "score",
+              "issue",
+              "todo",
+              "meeting"
+            ],
+            "title": "Entity Type"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id",
+            "description": "Id of the changed entity; a score is `{measurable_id}:{week_start}` (`m1:2026-11-02`)"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At",
+            "description": "Business time (the injected clock) of the change"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data",
+            "description": "Action-specific details. score.set/score.cleared: measurable_id, measurable_name, week_start, old, new (null when cleared). issue.created: title, source {type: manual|measurable|rock|todo, ...}. issue.priority_changed: title, old, new. issue.solved: title, resolution_note. todo.created: title, source_issue_id, owner_id, due_date. todo.done/todo.reopened: title. meeting.advanced: from, to. meeting.rated: rating. meeting.started/meeting.ended: empty."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "team_id",
+          "actor",
+          "action",
+          "entity_type",
+          "entity_id",
+          "at",
+          "data"
+        ],
+        "title": "AuditEvent",
+        "description": "One business mutation, recorded in the same transaction as the change. Append-only."
+      },
+      "AuditPage": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            },
+            "type": "array",
+            "title": "Events",
+            "description": "Newest first"
+          },
+          "next_before_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Id",
+            "description": "Pass as `before_id` to fetch the next (older) page; null when this is the last page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events",
+          "next_before_id"
+        ],
+        "title": "AuditPage"
+      },
+      "ClockInfo": {
+        "properties": {
+          "now": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Now"
+          },
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "current_week": {
+            "type": "string",
+            "format": "date",
+            "title": "Current Week"
+          },
+          "last_closed_week": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Closed Week"
+          },
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "now",
+          "today",
+          "current_week",
+          "last_closed_week",
+          "quarter"
+        ],
+        "title": "ClockInfo",
+        "description": "Business time derived from the injected clock (`APP_NOW`), in company time zone terms."
+      },
+      "Completion": {
+        "properties": {
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "due": {
+            "type": "integer",
+            "title": "Due"
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "rate_percent": {
+            "type": "integer",
+            "title": "Rate Percent"
+          },
+          "meets_target": {
+            "type": "boolean",
+            "title": "Meets Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_start",
+          "due",
+          "done",
+          "rate_percent",
+          "meets_target"
+        ],
+        "title": "Completion"
+      },
+      "ErrorBody": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Stable snake_case error code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human readable message"
+          },
+          "meeting_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meeting Id",
+            "description": "`meeting_already_active`: the id of the meeting that is already running"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScoreCell"
+              },
+              {
+                "$ref": "#/components/schemas/Issue"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current",
+            "description": "`version_conflict`: the current ScoreCell (scores) or Issue (priority)"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "on_track",
+                  "off_track",
+                  "pending"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "`not_off_track`: the cell's actual status"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field",
+            "description": "422 business errors: the offending field"
+          },
+          "current_section": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "scorecard",
+                  "ids",
+                  "conclude"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Section",
+            "description": "`stale_section`: the section the meeting is actually in"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "description": "The `detail` object of an error response. Which extra keys are present depends on `code`."
+      },
+      "Goal": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "at_least",
+              "at_most",
+              "between",
+              "exactly"
+            ],
+            "title": "Type"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "value",
+          "min",
+          "max"
+        ],
+        "title": "Goal"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Issue": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "team_id": {
+            "type": "string",
+            "title": "Team Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "solved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solved At"
+          },
+          "resolution_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Note"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MeasurableIssueSource"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RockIssueSource"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TodoIssueSource"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "measurable": "#/components/schemas/MeasurableIssueSource",
+                    "rock": "#/components/schemas/RockIssueSource",
+                    "todo": "#/components/schemas/TodoIssueSource"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "todo_count": {
+            "type": "integer",
+            "title": "Todo Count",
+            "description": "To-Dos created from this Issue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "team_id",
+          "title",
+          "owner",
+          "priority",
+          "created_at",
+          "solved_at",
+          "resolution_note",
+          "source",
+          "version",
+          "todo_count"
+        ],
+        "title": "Issue"
+      },
+      "IssueCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "description": "5 = most important, 1 = least"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "IssueCreate"
+      },
+      "IssueRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "IssueRef"
+      },
+      "IssueSolve": {
+        "properties": {
+          "resolution_note": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Resolution Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resolution_note"
+        ],
+        "title": "IssueSolve"
+      },
+      "IssueTodoCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "owner_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Owner Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "owner_id"
+        ],
+        "title": "IssueTodoCreate"
+      },
+      "IssueUpdate": {
+        "properties": {
+          "priority": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 1.0,
+                "description": "5 = most important, 1 = least"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority",
+            "description": "1..5, or null to clear the priority"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0,
+                "description": "Optimistic lock: the `version` last seen; a stale one gives 409 `version_conflict`."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "priority"
+        ],
+        "title": "IssueUpdate"
+      },
+      "LoginRequest": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user_id"
+        ],
+        "title": "LoginRequest"
+      },
+      "LoginResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "title": "LoginResponse"
+      },
+      "MakeIssueResult": {
+        "properties": {
+          "issue": {
+            "$ref": "#/components/schemas/Issue"
+          },
+          "created": {
+            "type": "boolean",
+            "title": "Created",
+            "description": "False when an unsolved Issue for the same source already existed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "issue",
+          "created"
+        ],
+        "title": "MakeIssueResult"
+      },
+      "MeResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/TeamRef"
+            },
+            "type": "array",
+            "title": "Teams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "teams"
+        ],
+        "title": "MeResponse"
+      },
+      "MeasurableIssueSource": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "measurable",
+            "title": "Type"
+          },
+          "measurable_id": {
+            "type": "string",
+            "title": "Measurable Id"
+          },
+          "measurable_name": {
+            "type": "string",
+            "title": "Measurable Name"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "measurable_id",
+          "measurable_name",
+          "week_start"
+        ],
+        "title": "MeasurableIssueSource"
+      },
+      "MeasurableStatusEntry": {
+        "properties": {
+          "measurable_id": {
+            "type": "string",
+            "title": "Measurable Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "on_track",
+              "off_track",
+              "pending"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "measurable_id",
+          "name",
+          "value",
+          "status"
+        ],
+        "title": "MeasurableStatusEntry"
+      },
+      "MeetingAdvance": {
+        "properties": {
+          "from_section": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "scorecard",
+                  "ids",
+                  "conclude"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Section",
+            "description": "If set and the meeting is no longer in this section, the call fails with 409 `stale_section` instead of skipping a section (double-click protection)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MeetingAdvance",
+        "description": "Optional body of `POST /meetings/{id}/advance`: the section the facilitator was looking at."
+      },
+      "MeetingRecap": {
+        "properties": {
+          "issues_solved": {
+            "items": {
+              "$ref": "#/components/schemas/Issue"
+            },
+            "type": "array",
+            "title": "Issues Solved"
+          },
+          "todos_created": {
+            "items": {
+              "$ref": "#/components/schemas/Todo"
+            },
+            "type": "array",
+            "title": "Todos Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "issues_solved",
+          "todos_created"
+        ],
+        "title": "MeetingRecap"
+      },
+      "MeetingState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "team_id": {
+            "type": "string",
+            "title": "Team Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "ended"
+            ],
+            "title": "Status"
+          },
+          "facilitator": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "scorecard_week": {
+            "type": "string",
+            "format": "date",
+            "title": "Scorecard Week"
+          },
+          "agenda": {
+            "items": {
+              "$ref": "#/components/schemas/AgendaItem"
+            },
+            "type": "array",
+            "title": "Agenda"
+          },
+          "current_section": {
+            "type": "string",
+            "enum": [
+              "scorecard",
+              "ids",
+              "conclude"
+            ],
+            "title": "Current Section"
+          },
+          "section_started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Section Started At"
+          },
+          "server_now": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Server Now",
+            "description": "Clock time at serialization; elapsed = (now + offset) - section_started_at"
+          },
+          "attendees": {
+            "items": {
+              "$ref": "#/components/schemas/Attendee"
+            },
+            "type": "array",
+            "title": "Attendees"
+          },
+          "ratings": {
+            "items": {
+              "$ref": "#/components/schemas/RatingEntry"
+            },
+            "type": "array",
+            "title": "Ratings"
+          },
+          "average_rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "team_id",
+          "status",
+          "facilitator",
+          "started_at",
+          "ended_at",
+          "scorecard_week",
+          "agenda",
+          "current_section",
+          "section_started_at",
+          "server_now",
+          "attendees",
+          "ratings",
+          "average_rating"
+        ],
+        "title": "MeetingState",
+        "description": "Everything a client needs to render a meeting. Postgres owns it; the WebSocket only notifies."
+      },
+      "MeetingSummary": {
+        "properties": {
+          "meeting_id": {
+            "type": "string",
+            "title": "Meeting Id"
+          },
+          "team_id": {
+            "type": "string",
+            "title": "Team Id"
+          },
+          "scorecard_week": {
+            "type": "string",
+            "format": "date",
+            "title": "Scorecard Week"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "ended_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Ended At"
+          },
+          "measurable_status": {
+            "items": {
+              "$ref": "#/components/schemas/MeasurableStatusEntry"
+            },
+            "type": "array",
+            "title": "Measurable Status"
+          },
+          "issues_solved": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryIssue"
+            },
+            "type": "array",
+            "title": "Issues Solved"
+          },
+          "todos_created": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryTodo"
+            },
+            "type": "array",
+            "title": "Todos Created"
+          },
+          "attendees": {
+            "items": {
+              "$ref": "#/components/schemas/UserRef"
+            },
+            "type": "array",
+            "title": "Attendees"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meeting_id",
+          "team_id",
+          "scorecard_week",
+          "started_at",
+          "ended_at",
+          "measurable_status",
+          "issues_solved",
+          "todos_created",
+          "attendees",
+          "rating"
+        ],
+        "title": "MeetingSummary",
+        "description": "Frozen snapshot written when the meeting ends; later edits never change it."
+      },
+      "Milestone": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "past_due": {
+            "type": "boolean",
+            "title": "Past Due"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "due_date",
+          "done",
+          "past_due"
+        ],
+        "title": "Milestone"
+      },
+      "Permissions": {
+        "properties": {
+          "can_write": {
+            "type": "boolean",
+            "title": "Can Write"
+          },
+          "can_facilitate": {
+            "type": "boolean",
+            "title": "Can Facilitate"
+          },
+          "can_rate": {
+            "type": "boolean",
+            "title": "Can Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "can_write",
+          "can_facilitate",
+          "can_rate"
+        ],
+        "title": "Permissions",
+        "description": "What the caller may do in this team (UX hint only: the server enforces every rule)."
+      },
+      "RatingEntry": {
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "rating": {
+            "type": "integer",
+            "title": "Rating"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user_id",
+          "name",
+          "rating"
+        ],
+        "title": "RatingEntry"
+      },
+      "RatingUpdate": {
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Rating"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rating"
+        ],
+        "title": "RatingUpdate"
+      },
+      "ReadyStatus": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "unavailable"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ReadyStatus"
+      },
+      "Rock": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "seeded_status": {
+            "type": "string",
+            "enum": [
+              "on_track",
+              "off_track",
+              "complete"
+            ],
+            "title": "Seeded Status"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "on_track",
+              "off_track",
+              "complete"
+            ],
+            "title": "Status"
+          },
+          "progress_percent": {
+            "type": "integer",
+            "title": "Progress Percent"
+          },
+          "milestones": {
+            "items": {
+              "$ref": "#/components/schemas/Milestone"
+            },
+            "type": "array",
+            "title": "Milestones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "owner",
+          "seeded_status",
+          "status",
+          "progress_percent",
+          "milestones"
+        ],
+        "title": "Rock"
+      },
+      "RockIssueSource": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "rock",
+            "title": "Type"
+          },
+          "rock_id": {
+            "type": "string",
+            "title": "Rock Id"
+          },
+          "rock_title": {
+            "type": "string",
+            "title": "Rock Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "rock_id",
+          "rock_title"
+        ],
+        "title": "RockIssueSource"
+      },
+      "RockList": {
+        "properties": {
+          "quarter": {
+            "type": "string",
+            "title": "Quarter"
+          },
+          "rocks": {
+            "items": {
+              "$ref": "#/components/schemas/Rock"
+            },
+            "type": "array",
+            "title": "Rocks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "quarter",
+          "rocks"
+        ],
+        "title": "RockList"
+      },
+      "ScoreCell": {
+        "properties": {
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "on_track",
+              "off_track",
+              "pending"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "Null while the cell has no score"
+          },
+          "open_issue_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Issue Id",
+            "description": "The unsolved Issue created from this cell, if any"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_start",
+          "value",
+          "status",
+          "version",
+          "open_issue_id"
+        ],
+        "title": "ScoreCell"
+      },
+      "ScoreUpdate": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMaximum": 1000000000000.0,
+                "exclusiveMinimum": -1000000000000.0,
+                "description": "Finite number with absolute value below 1e12."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "The score; null clears it"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0,
+                "description": "Optimistic lock: the `version` last seen; a stale one gives 409 `version_conflict`."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "ScoreUpdate"
+      },
+      "Scorecard": {
+        "properties": {
+          "weeks": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Weeks",
+            "description": "The 13 weeks ending with the current week, oldest first"
+          },
+          "current_week": {
+            "type": "string",
+            "format": "date",
+            "title": "Current Week"
+          },
+          "last_closed_week": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Closed Week"
+          },
+          "measurables": {
+            "items": {
+              "$ref": "#/components/schemas/ScorecardMeasurable"
+            },
+            "type": "array",
+            "title": "Measurables"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weeks",
+          "current_week",
+          "last_closed_week",
+          "measurables"
+        ],
+        "title": "Scorecard"
+      },
+      "ScorecardMeasurable": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "goal": {
+            "$ref": "#/components/schemas/Goal"
+          },
+          "goal_label": {
+            "type": "string",
+            "title": "Goal Label"
+          },
+          "cells": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreCell"
+            },
+            "type": "array",
+            "title": "Cells",
+            "description": "Aligned with `Scorecard.weeks`"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "owner",
+          "goal",
+          "goal_label",
+          "cells"
+        ],
+        "title": "ScorecardMeasurable"
+      },
+      "SummaryIssue": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "SummaryIssue"
+      },
+      "SummaryTodo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "owner",
+          "due_date"
+        ],
+        "title": "SummaryTodo"
+      },
+      "TeamDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/UserRef"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "eligible_owners": {
+            "items": {
+              "$ref": "#/components/schemas/UserRef"
+            },
+            "type": "array",
+            "title": "Eligible Owners"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/Permissions"
+          },
+          "clock": {
+            "$ref": "#/components/schemas/ClockInfo"
+          },
+          "active_meeting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActiveMeetingRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "members",
+          "eligible_owners",
+          "permissions",
+          "clock",
+          "active_meeting"
+        ],
+        "title": "TeamDetail"
+      },
+      "TeamRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TeamRef"
+      },
+      "Todo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "team_id": {
+            "type": "string",
+            "title": "Team Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserRef"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "overdue": {
+            "type": "boolean",
+            "title": "Overdue"
+          },
+          "source_issue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssueRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "team_id",
+          "title",
+          "owner",
+          "due_date",
+          "done_at",
+          "done",
+          "overdue",
+          "source_issue",
+          "created_at"
+        ],
+        "title": "Todo"
+      },
+      "TodoIssueSource": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "todo",
+            "title": "Type"
+          },
+          "todo_id": {
+            "type": "string",
+            "title": "Todo Id"
+          },
+          "todo_title": {
+            "type": "string",
+            "title": "Todo Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "todo_id",
+          "todo_title"
+        ],
+        "title": "TodoIssueSource"
+      },
+      "TodoList": {
+        "properties": {
+          "todos": {
+            "items": {
+              "$ref": "#/components/schemas/Todo"
+            },
+            "type": "array",
+            "title": "Todos",
+            "description": "Open first (due date ascending), then done (done_at descending)"
+          },
+          "last_closed_week": {
+            "type": "string",
+            "format": "date",
+            "title": "Last Closed Week"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Completion"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when nothing was due in the last closed week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "todos",
+          "last_closed_week",
+          "completion"
+        ],
+        "title": "TodoList"
+      },
+      "TodoUpdate": {
+        "properties": {
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "done"
+        ],
+        "title": "TodoUpdate"
+      },
+      "UserRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "team_member",
+              "observer"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role"
+        ],
+        "title": "UserRef"
+      },
+      "UserWithTeams": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "team_member",
+              "observer"
+            ],
+            "title": "Role"
+          },
+          "teams": {
+            "items": {
+              "$ref": "#/components/schemas/TeamRef"
+            },
+            "type": "array",
+            "title": "Teams"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role",
+          "teams"
+        ],
+        "title": "UserWithTeams",
+        "description": "`UserRef` plus the user's teams (every team for admins); feeds the login screen's user switcher."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
