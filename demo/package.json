@@ -1,0 +1,12 @@
+{
+  "name": "l10-demo",
+  "private": true,
+  "type": "module",
+  "description": "Records the captioned two-browser demo video of the L10 app (see README.md). Runs inside docker via demo/record.sh.",
+  "scripts": {
+    "record": "node recorder/record.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}

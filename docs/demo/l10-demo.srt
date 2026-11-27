@@ -1,0 +1,51 @@
+1
+00:00:00,001 --> 00:00:05,502
+Sign in (seeded users)
+
+2
+00:00:05,502 --> 00:00:11,001
+Scorecard: live status
+
+3
+00:00:11,001 --> 00:00:16,501
+Score edit syncs live
+
+4
+00:00:16,501 --> 00:00:22,002
+Make it an Issue
+
+5
+00:00:22,002 --> 00:00:27,503
+Issues · To-Dos · Rocks · Activity
+
+6
+00:00:27,503 --> 00:00:34,571
+Start meeting · teammate joins
+
+7
+00:00:34,571 --> 00:00:40,889
+Live presence · server timer
+
+8
+00:00:40,889 --> 00:00:46,390
+Meeting Scorecard: Make it an Issue
+
+9
+00:00:46,390 --> 00:00:51,890
+Next: IDS · other browser follows
+
+10
+00:00:51,890 --> 00:00:57,390
+Next: Conclude · everyone rates
+
+11
+00:00:57,390 --> 00:01:02,890
+Ratings: average 8.5
+
+12
+00:01:02,890 --> 00:01:13,977
+End meeting · frozen summary
+
+13
+00:01:13,977 --> 00:01:28,584
+Observer: view only

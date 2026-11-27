@@ -1,0 +1,27 @@
+# Overlay used by demo/record.sh with `-p l10demo`: an isolated, throwaway stack with no host ports (a sibling of
+# docker-compose.test.yml), plus the recorder, which drives two headless browsers at http://proxy and writes
+# the video to ./demo/out. Never started by a plain `docker compose up` (profile "demo").
+services:
+  db:
+    ports: !reset []
+  proxy:
+    ports: !reset []
+  api:
+    environment:
+      ALLOWED_ORIGINS: http://proxy
+  demo:
+    build: ./demo
+    profiles: ["demo"]
+    environment:
+      DEMO_BASE_URL: http://proxy
+      DEMO_OUT_DIR: /demo/out
+      DEMO_KEEP_RAW: ${DEMO_KEEP_RAW:-0}
+      DEMO_SKIP_COMPOSE: ${DEMO_SKIP_COMPOSE:-0}
+      DEMO_REVIEW: ${DEMO_REVIEW:-0}
+      DEMO_X264_PRESET: ${DEMO_X264_PRESET:-slow}
+      DEMO_X264_CRF: ${DEMO_X264_CRF:-18}
+    volumes:
+      - ./demo/out:/demo/out
+    depends_on:
+      proxy:
+        condition: service_started

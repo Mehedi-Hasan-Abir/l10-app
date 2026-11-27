@@ -26,3 +26,6 @@ Thumbs.db
 # Claude local settings
 .claude/settings.local.json
 docs/_private/
+
+demo/out/
+demo/node_modules/

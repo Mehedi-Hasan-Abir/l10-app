@@ -3,6 +3,8 @@
 Each team tracks weekly Measurables, quarterly Rocks, To-Dos and Issues, and runs its weekly meeting in sync across
 browsers. Stack: Next.js 16 + TypeScript + shadcn/ui + Tailwind · FastAPI · Postgres 17 (Alembic) · Caddy.
 Design rationale: **[DECISIONS.md](DECISIONS.md)**. Full build spec: [docs/PLAN.md](docs/PLAN.md).
+**Demo video (1:31, captioned):** [docs/demo/l10-demo.mp4](docs/demo/l10-demo.mp4): two browsers in one live meeting,
+recorded by a script (`bash demo/record.sh`, see [demo/README.md](demo/README.md)).
 
 ## Run it
 ```bash
